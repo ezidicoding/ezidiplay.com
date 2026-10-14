@@ -1,0 +1,6 @@
+{
+    "host": "http://your-server-ip:8080",
+    "username": "your_default_username",
+    "password": "your_default_password",
+    "playlistName": "EZIDITV Default"
+}
