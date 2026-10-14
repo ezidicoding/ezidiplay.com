@@ -1,0 +1,15 @@
+name: Deploy to GitHub Pages
+on:
+  push:
+    branches: [ main ]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Create Config File
+        run: |
+          echo "{\"host\": \"${{ secrets.SERVER_HOST }}\", \"username\": \"${{ secrets.SERVER_USER }}\", \"password\": \"${{ secrets.SERVER_PASS }}\"}" > config.json
+      - name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@v2
+        
