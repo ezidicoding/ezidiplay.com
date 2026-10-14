@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>EZIDITV - Smart IPTV Player</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- VideoJS Player Professional -->
+    <link href="https://vjs.zencdn.net/8.3.0/video-js.css" rel="stylesheet" />
+    <script src="https://vjs.zencdn.net/8.3.0/video.min.js"></script>
+
+    <style>
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.6); }
+        ::-webkit-scrollbar-thumb { background: #8b5cf6; border-radius: 10px; }
+        .glow-purple { box-shadow: 0 0 20px rgba(139, 92, 246, 0.3); }
+        .glass-panel { background: rgba(15, 23, 42, 0.88); backdrop-filter: blur(20px); }
+        .tv-focusable:focus, .tv-focusable:hover {
+            outline: none;
+            border-color: #a855f7 !important;
+            transform: scale(1.02);
+            box-shadow: 0 0 15px rgba(168, 85, 247, 0.5);
+        }
+    </style>
+</head>
+<body class="bg-black text-white min-h-screen font-sans antialiased selection:bg-purple-600 overflow-x-hidden">
+
+    <!-- ==================== 1. شاشة تسجيل الدخول EZIDITV ==================== -->
+    <div id="loginSection" class="min-h-screen flex items-center justify-center p-4 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-purple-900/30 via-gray-950 to-black">
+        <div class="w-full max-w-md glass-panel border border-purple-500/30 rounded-3xl p-6 sm:p-8 shadow-2xl relative">
+            
+            <div class="text-center mb-6">
+                <div class="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-tr from-purple-600 to-indigo-600 text-white rounded-2xl mb-3 shadow-lg shadow-purple-500/30">
+                    <i class="fa-solid fa-play text-2xl ml-1"></i>
+                </div>
+                <h1 class="text-3xl font-black tracking-wider">EZIDI<span class="text-purple-500">TV</span></h1>
+                <p class="text-gray-400 text-xs mt-1">مشغل IPTV المتطور لكافة الشاشات والأجهزة</p>
+            </div>
+
+            <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-3.5">
+                <div>
+                    <label class="block text-gray-300 text-xs font-semibold mb-1">اسم القائمة (Playlist Name)</label>
+                    <input type="text" id="playlistName" placeholder="EZIDITV VIP" 
+                        class="w-full bg-gray-900 border border-gray-700/80 text-white rounded-xl py-2.5 px-3 text-xs focus:border-purple-500 outline-none tv-focusable">
+                </div>
+
+                <div>
+                    <label class="block text-gray-300 text-xs font-semibold mb-1">رابط السيرفر (Host URL) *</label>
+                    <input type="text" id="hostUrl" required placeholder="http://domain.com:8080" 
+                        class="w-full bg-gray-900 border border-gray-700/80 text-white rounded-xl py-2.5 px-3 text-xs focus:border-purple-500 outline-none tv-focusable">
+                </div>
+
+                <div>
+                    <label class="block text-gray-300 text-xs font-semibold mb-1">اسم المستخدم (Username) *</label>
+                    <input type="text" id="username" required placeholder="Username" 
+                        class="w-full bg-gray-900 border border-gray-700/80 text-white rounded-xl py-2.5 px-3 text-xs focus:border-purple-500 outline-none tv-focusable">
+                </div>
+
+                <div>
+                    <label class="block text-gray-300 text-xs font-semibold mb-1">كلمة المرور (Password) *</label>
+                    <input type="password" id="password" required placeholder="••••••••" 
+                        class="w-full bg-gray-900 border border-gray-700/80 text-white rounded-xl py-2.5 px-3 text-xs focus:border-purple-500 outline-none tv-focusable">
+                </div>
+
+                <button type="submit" 
+                    class="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold py-3 rounded-xl shadow-lg shadow-purple-600/30 transition text-xs mt-2 tv-focusable">
+                    دخول إلى EZIDITV
+                </button>
+            </form>
+
+            <div id="loginMessage" class="mt-3 text-center text-xs font-medium hidden"></div>
+        </div>
+    </div>
+
+
+    <!-- ==================== 2. الداشبورد والمشغل ==================== -->
+    <div id="dashboardSection" class="hidden min-h-screen flex flex-col bg-gray-950">
+        
+        <!-- الشريط العلوي -->
+        <header class="glass-panel border-b border-gray-800 px-4 lg:px-8 py-3 flex flex-wrap items-center justify-between sticky top-0 z-50 gap-3">
+            <div class="flex items-center space-x-3 space-x-reverse">
+                <div class="w-9 h-9 bg-purple-600 rounded-xl flex items-center justify-center font-black text-white shadow-md">E</div>
+                <div>
+                    <h2 class="font-black text-lg tracking-wider">EZIDI<span class="text-purple-500">TV</span></h2>
+                    <span class="text-[10px] text-emerald-400 flex items-center gap-1">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span> متصل
+                    </span>
+                </div>
+            </div>
+
+            <!-- أزرار الأقسام -->
+            <nav class="flex items-center gap-1.5 overflow-x-auto py-1 max-w-full custom-scrollbar">
+                <button onclick="switchCategory('bein')" id="tab-bein" class="px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition tv-focusable bg-purple-600 text-white">
+                    <i class="fa-solid fa-trophy text-amber-300 ml-1"></i> beIN Sports
+                </button>
+                <button onclick="switchCategory('arabic')" id="tab-arabic" class="px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition tv-focusable text-gray-400 hover:text-white">
+                    <i class="fa-solid fa-tv text-emerald-400 ml-1"></i> قنوات عربية
+                </button>
+                <button onclick="switchCategory('foreign')" id="tab-foreign" class="px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition tv-focusable text-gray-400 hover:text-white">
+                    <i class="fa-solid fa-film text-blue-400 ml-1"></i> أفلام أجنبية
+                </button>
+                <button onclick="switchCategory('series')" id="tab-series" class="px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition tv-focusable text-gray-400 hover:text-white">
+                    <i class="fa-solid fa-clapperboard text-purple-400 ml-1"></i> مسلسلات
+                </button>
+                <button onclick="requestAdultAccess()" id="tab-adult" class="px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition tv-focusable text-red-400 hover:text-red-300 bg-red-950/30 border border-red-500/20">
+                    <i class="fa-solid fa-lock text-red-500 ml-1"></i> أفلام +18
+                </button>
+            </nav>
+
+            <button onclick="logout()" class="px-3 py-1.5 bg-red-600/20 text-red-400 hover:bg-red-600 hover:text-white rounded-xl text-xs font-bold transition tv-focusable">
+                <i class="fa-solid fa-power-off"></i>
+            </button>
+        </header>
+
+        <!-- المحتوى الرئيسي -->
+        <main class="flex-1 p-3 sm:p-5 grid grid-cols-1 lg:grid-cols-12 gap-5 max-w-[1920px] mx-auto w-full">
+            
+            <!-- مشغل الفيديو -->
+            <div class="lg:col-span-8 flex flex-col space-y-3">
+                <div class="bg-black rounded-3xl overflow-hidden border border-purple-500/30 shadow-2xl relative aspect-video glow-purple">
+                    <video id="mainPlayer" class="video-js vjs-default-skin vjs-big-play-centered w-full h-full" controls preload="auto" poster="https://images.unsplash.com/photo-1574375927938-d5a98e8ffe85?w=1200">
+                    </video>
+                </div>
+
+                <div class="glass-panel border border-gray-800 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                        <h3 id="currentStreamTitle" class="text-base font-bold">اختر محتوى من القائمة</h3>
+                        <p id="currentStreamCategory" class="text-xs text-gray-400 mt-0.5">EZIDITV Player</p>
+                    </div>
+                    
+                    <div class="flex items-center gap-2">
+                        <button onclick="rewindPlayer(10)" class="px-3 py-1.5 bg-gray-800 hover:bg-purple-600 rounded-lg text-xs font-bold transition tv-focusable"><i class="fa-solid fa-backward-step"></i> 10s</button>
+                        <button onclick="forwardPlayer(10)" class="px-3 py-1.5 bg-gray-800 hover:bg-purple-600 rounded-lg text-xs font-bold transition tv-focusable">10s <i class="fa-solid fa-forward-step"></i></button>
+                        <button onclick="toggleFullscreen()" class="px-3 py-1.5 bg-purple-600 hover:bg-purple-500 rounded-lg text-xs font-bold transition tv-focusable"><i class="fa-solid fa-expand"></i> ملء الشاشة</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- قائمة العرض والتحكم بـ 10 عناصر لكل صفحة -->
+            <div class="lg:col-span-4 glass-panel border border-gray-800 rounded-3xl p-4 flex flex-col h-[580px] lg:h-auto justify-between">
+                <div>
+                    <div class="mb-3">
+                        <input type="text" id="searchInput" oninput="filterChannels()" placeholder="بحث عن اسم الفيلم أو المسلسل..." 
+                            class="w-full bg-gray-900 border border-gray-700/80 text-white rounded-xl py-2 px-3 text-xs focus:border-purple-500 outline-none tv-focusable">
+                    </div>
+
+                    <div id="channelsList" class="overflow-y-auto space-y-2 pr-1 custom-scrollbar max-h-[420px]"></div>
+                </div>
+
+                <!-- أزرار التنقل (الصفحات: 10 عناصر لكل صفحة) -->
+                <div id="paginationControls" class="hidden items-center justify-between pt-3 border-t border-gray-800 mt-2">
+                    <button onclick="changePage(-1)" id="prevPageBtn" class="px-3 py-1.5 bg-purple-900/60 hover:bg-purple-600 text-xs rounded-xl transition font-bold tv-focusable disabled:opacity-40">
+                        <i class="fa-solid fa-chevron-right ml-1"></i> السابق
+                    </button>
+                    <span id="pageIndicator" class="text-xs text-purple-300 font-bold">صفحة 1</span>
+                    <button onclick="changePage(1)" id="nextPageBtn" class="px-3 py-1.5 bg-purple-900/60 hover:bg-purple-600 text-xs rounded-xl transition font-bold tv-focusable disabled:opacity-40">
+                        التالي <i class="fa-solid fa-chevron-left mr-1"></i>
+                    </button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- نافذة إدخال كود الحماية +18 -->
+    <div id="adultModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
+        <div class="bg-gray-900 border border-red-500/40 rounded-3xl p-6 w-full max-w-sm text-center shadow-2xl">
+            <div class="w-12 h-12 bg-red-600/20 text-red-500 rounded-2xl flex items-center justify-center mx-auto mb-3 border border-red-500/30">
+                <i class="fa-solid fa-shield-halved text-xl"></i>
+            </div>
+            <h3 class="text-base font-bold text-white mb-1">قسم محمي (+18)</h3>
+            <p class="text-gray-400 text-xs mb-4">الرجاء إدخال الكود المخصص للمتابعة</p>
+            <input type="password" id="adultPinInput" placeholder="أدخل الكود السرّي" 
+                class="w-full bg-black border border-gray-700 text-center text-white rounded-xl py-2.5 px-3 text-sm focus:border-red-500 outline-none mb-3">
+            <div class="flex gap-2">
+                <button onclick="verifyAdultPin()" class="flex-1 bg-red-600 hover:bg-red-500 text-white py-2.5 rounded-xl text-xs font-bold transition">دخول</button>
+                <button onclick="closeAdultModal()" class="flex-1 bg-gray-800 hover:bg-gray-700 text-gray-300 py-2.5 rounded-xl text-xs font-bold transition">إلغاء</button>
+            </div>
+            <p id="adultErrorMsg" class="text-red-400 text-[10px] mt-2 hidden">الكود غير صحيح!</p>
+        </div>
+    </div>
+
+    <!-- Script التنقل والبيانات -->
+    <script>
+        let player = videojs('mainPlayer');
+        let currentAccount = { host: '', username: '', password: '' };
+        let allStreams = [];
+        let filteredStreams = [];
+        let currentCategory = 'bein';
+        let currentPage = 1;
+        const itemsPerPage = 10; 
+        let adultUnlocked = false; // التحكم بحالة القفل
+
+        const ezidiContent = {
+            bein: [
+                { name: "beIN SPORTS 1 HD Premium", stream_id: "b1", stream_icon: "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=120", stream_url: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8" },
+                { name: "beIN SPORTS 2 HD Premium", stream_id: "b2", stream_icon: "https://images.unsplash.com/photo-1518091043644-c1d4457512c6?w=120", stream_url: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8" }
+            ],
+            arabic: [
+                { name: "MBC 1 HD العربية", stream_id: "a1", stream_icon: "https://images.unsplash.com/photo-1522869635100-9f4c5e86aa37?w=120", stream_url: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8" },
+                { name: "روتانا سينما", stream_id: "a2", stream_icon: "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=120", stream_url: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8" }
+            ],
+            foreign: [
+                { name: "Movie 1: Avatar Way of Water", stream_id: "f1", stream_icon: "https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=120", container_extension: "mp4", stream_url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4" },
+                { name: "Movie 2: The Dark Knight", stream_id: "f2", stream_icon: "https://images.unsplash.com/photo-1478720568477-152d9b164e26?w=120", container_extension: "mp4", stream_url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4" },
+                { name: "Movie 3: Interstellar", stream_id: "f3", stream_icon: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=120", container_extension: "mp4", stream_url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4" },
+                { name: "Movie 4: Inception", stream_id: "f4", stream_icon: "https://images.unsplash.com/photo-1485846234645-a62644f84728?w=120", container_extension: "mp4", stream_url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4" },
+                { name: "Movie 5: Joker", stream_id: "f5", stream_icon: "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=120", container_extension: "mp4", stream_url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/SubaruOutbackSeeTheWorld.mp4" },
+                { name: "Movie 6: Avengers", stream_id: "f6", stream_icon: "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=120", container_extension: "mp4", stream_url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/WeAreGoingOnBullrun.mp4" },
+                { name: "Movie 7: Spider-Man", stream_id: "f7", stream_icon: "https://images.unsplash.com/photo-1635805737707-575885ab0820?w=120", container_extension: "mp4", stream_url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/WhatCarCanYouGetForAGrand.mp4" },
+                { name: "Movie 8: Titanic", stream_id: "f8", stream_icon: "https://images.unsplash.com/photo-1501426026826-31c667bdf23d?w=120", container_extension: "mp4", stream_url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4" },
+                { name: "Movie 9: Gladiator", stream_id: "f9", stream_icon: "https://images.unsplash.com/photo-1534447677768-be436bb09401?w=120", container_extension: "mp4", stream_url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4" },
+                { name: "Movie 10: Matrix", stream_id: "f10", stream_icon: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=120", container_extension: "mp4", stream_url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4" },
+                { name: "Movie 11: Fast & Furious", stream_id: "f11", stream_icon: "https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?w=120", container_extension: "mp4", stream_url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4" }
+            ],
+            series: [
+                { name: "Series 1: Game of Thrones", series_id: "s1", stream_icon: "https://images.unsplash.com/photo-1514533450685-4493e01d1fdc?w=120" },
+                { name: "Series 2: Breaking Bad", series_id: "s2", stream_icon: "https://images.unsplash.com/photo-1574375927938-d5a98e8ffe85?w=120" },
+                { name: "Series 3: Stranger Things", series_id: "s3", stream_icon: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=120" },
+                { name: "Series 4: Peaky Blinders", series_id: "s4", stream_icon: "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=120" },
+                { name: "Series 5: Money Heist", series_id: "s5", stream_icon: "https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=120" },
+                { name: "Series 6: Vikings", series_id: "s6", stream_icon: "https://images.unsplash.com/photo-1518091043644-c1d4457512c6?w=120" },
+                { name: "Series 7: Prison Break", series_id: "s7", stream_icon: "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=120" },
+                { name: "Series 8: The Witcher", series_id: "s8", stream_icon: "https://images.unsplash.com/photo-1534447677768-be436bb09401?w=120" },
+                { name: "Series 9: Dark", series_id: "s9", stream_icon: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=120" },
+                { name: "Series 10: Lost", series_id: "s10", stream_icon: "https://images.unsplash.com/photo-1522869635100-9f4c5e86aa37?w=120" },
+                { name: "Series 11: The Walking Dead", series_id: "s11", stream_icon: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=120" }
+            ],
+            adult: [
+                { name: "Adult Stream VIP 1 (+18)", stream_id: "x1", stream_icon: "https://via.placeholder.com/120/7f1d1d/ffffff?text=+18", stream_url: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8" },
+                { name: "Adult Movie Pack (+18)", stream_id: "x2", stream_icon: "https://via.placeholder.com/120/7f1d1d/ffffff?text=+18", stream_url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4" }
+            ]
+        };
+
+        window.onload = function() {
+            const h = localStorage.getItem('ez_host');
+            const u = localStorage.getItem('ez_user');
+            const p = localStorage.getItem('ez_pass');
+            if (h && u && p) {
+                currentAccount = { host: h, username: u, password: p };
+                showDashboard();
+            }
+        };
+
+        async function handleLogin(e) {
+            e.preventDefault();
+            let host = document.getElementById('hostUrl').value.trim();
+            const user = document.getElementById('username').value.trim();
+            const pass = document.getElementById('password').value.trim();
+            const name = document.getElementById('playlistName').value.trim() || 'EZIDITV';
+            if (host.endsWith('/')) host = host.slice(0, -1);
+
+            localStorage.setItem('ez_host', host);
+            localStorage.setItem('ez_user', user);
+            localStorage.setItem('ez_pass', pass);
+            currentAccount = { host, username: user, password: pass };
+            showDashboard();
+        }
+
+        function showDashboard() {
+            document.getElementById('loginSection').classList.add('hidden');
+            document.getElementById('dashboardSection').classList.remove('hidden');
+            switchCategory('bein');
+        }
+
+        // إظهار نافذة إدخال الكود
+        function requestAdultAccess() {
+            if (adultUnlocked) {
+                switchCategory('adult');
+            } else {
+                document.getElementById('adultModal').classList.remove('hidden');
+                document.getElementById('adultPinInput').value = '';
+                document.getElementById('adultErrorMsg').classList.add('hidden');
+            }
+        }
+
+        function closeAdultModal() {
+            document.getElementById('adultModal').classList.add('hidden');
+        }
+
+        // فحص صحة رمز PIN السري 181818
+        function verifyAdultPin() {
+            const pin = document.getElementById('adultPinInput').value.trim();
+            if (pin === '181818') {
+                adultUnlocked = true; // فتح القسم مؤقتاً
+                closeAdultModal();
+                switchCategory('adult');
+            } else {
+                document.getElementById('adultErrorMsg').classList.remove('hidden');
+            }
+        }
+
+        function switchCategory(cat) {
+            // إعادة قفل قسم +18 بمجرد الخروج منه إلى أي قسم آخر
+            if (currentCategory === 'adult' && cat !== 'adult') {
+                adultUnlocked = false;
+            }
+
+            currentCategory = cat;
+            currentPage = 1; 
+            const tabs = ['bein', 'arabic', 'foreign', 'series', 'adult'];
+            
+            tabs.forEach(t => {
+                const btn = document.getElementById(`tab-${t}`);
+                if (btn) {
+                    if (t === cat) {
+                        btn.className = "px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition tv-focusable bg-purple-600 text-white glow-purple";
+                    } else {
+                        btn.className = "px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition tv-focusable text-gray-400 hover:text-white";
+                    }
+                }
+            });
+
+            loadStreams(cat);
+        }
+
+        async function loadStreams(category) {
+            const listContainer = document.getElementById('channelsList');
+            listContainer.innerHTML = '<div class="text-center text-purple-400 py-8"><i class="fa-solid fa-circle-notch fa-spin text-xl mb-2"></i><br><span class="text-xs">جاري التحميل...</span></div>';
+
+            let action = 'get_live_streams';
+            if (category === 'foreign') action = 'get_vod_streams';
+            if (category === 'series') action = 'get_series';
+
+            try {
+                const url = `${currentAccount.host}/player_api.php?username=${currentAccount.username}&password=${currentAccount.password}&action=${action}`;
+                const res = await fetch(url);
+                const data = await res.json();
+
+                if (Array.isArray(data) && data.length > 0) {
+                    if (category === 'bein') {
+                        allStreams = data.filter(i => (i.name || '').toLowerCase().includes('bein'));
+                    } else if (category === 'arabic') {
+                        allStreams = data.filter(i => (i.name || '').toLowerCase().includes('mbc') || (i.name || '').toLowerCase().includes('arabic') || (i.name || '').toLowerCase().includes('bein sports'));
+                    } else if (category === 'adult') {
+                        allStreams = data.filter(i => (i.name || '').toLowerCase().includes('18+') || (i.name || '').toLowerCase().includes('adult'));
+                    } else {
+                        allStreams = data;
+                    }
+                } else {
+                    allStreams = ezidiContent[category] || [];
+                }
+            } catch (err) {
+                allStreams = ezidiContent[category] || [];
+            }
+
+            filteredStreams = allStreams;
+            renderPaginationView();
+        }
+
+        function renderPaginationView() {
+            const paginationEl = document.getElementById('paginationControls');
+            
+            if (currentCategory === 'foreign' || currentCategory === 'series' || allStreams.length > 10) {
+                paginationEl.classList.remove('hidden');
+                paginationEl.classList.add('flex');
+            } else {
+                paginationEl.classList.add('hidden');
+                paginationEl.classList.remove('flex');
+            }
+
+            const totalPages = Math.ceil(filteredStreams.length / itemsPerPage) || 1;
+            if (currentPage > totalPages) currentPage = totalPages;
+            if (currentPage < 1) currentPage = 1;
+
+            document.getElementById('pageIndicator').innerText = `صفحة ${currentPage} من ${totalPages}`;
+            document.getElementById('prevPageBtn').disabled = currentPage === 1;
+            document.getElementById('nextPageBtn').disabled = currentPage === totalPages || totalPages === 0;
+
+            const start = (currentPage - 1) * itemsPerPage;
+            const end = start + itemsPerPage;
+            const paginatedItems = filteredStreams.slice(start, end);
+
+            renderStreams(paginatedItems);
+        }
+
+        function changePage(direction) {
+            currentPage += direction;
+            renderPaginationView();
+            document.getElementById('channelsList').scrollTop = 0;
+        }
+
+        function renderStreams(items) {
+            const listContainer = document.getElementById('channelsList');
+            listContainer.innerHTML = '';
+
+            if (!Array.isArray(items) || items.length === 0) {
+                listContainer.innerHTML = '<div class="text-center text-gray-500 py-10 text-xs">لا توجد نتائج مطابقة للبحث</div>';
+                return;
+            }
+
+            items.forEach(item => {
+                const title = item.name || 'محتوى EZIDITV';
+                const icon = item.stream_icon || 'https://via.placeholder.com/120/1e1b4b/ffffff?text=EZIDI';
+                const id = item.stream_id || item.series_id || '0';
+                const ext = item.container_extension || 'mp4';
+                const directUrl = item.stream_url || '';
+
+                const div = document.createElement('div');
+                div.className = "flex items-center gap-3 p-2.5 hover:bg-purple-900/40 rounded-2xl cursor-pointer transition border border-transparent hover:border-purple-500/30 tv-focusable";
+                div.tabIndex = 0;
+                div.onclick = () => playStream(title, id, ext, directUrl);
+
+                div.innerHTML = `
+                    <img src="${icon}" onerror="this.src='https://via.placeholder.com/120/1e1b4b/ffffff?text=TV'" class="w-10 h-10 rounded-xl object-cover bg-gray-900">
+                    <div class="flex-1 truncate">
+                        <h4 class="text-xs font-bold truncate">${title}</h4>
+                        <span class="text-[10px] text-purple-400">EZIDITV HD</span>
+                    </div>
+                    <i class="fa-solid fa-play text-purple-400 text-xs"></i>
+                `;
+                listContainer.appendChild(div);
+            });
+        }
+
+        function filterChannels() {
+            const query = document.getElementById('searchInput').value.toLowerCase().trim();
+            filteredStreams = allStreams.filter(s => (s.name || '').toLowerCase().includes(query));
+            currentPage = 1; 
+            renderPaginationView();
+        }
+
+        function playStream(title, streamId, extension, directUrl) {
+            document.getElementById('currentStreamTitle').innerText = title;
+            document.getElementById('currentStreamCategory').innerText = `جاري التشغيل في قسم: ${currentCategory.toUpperCase()}`;
+
+            let streamURL = directUrl;
+            if (!streamURL) {
+                if (currentCategory === 'bein' || currentCategory === 'arabic' || currentCategory === 'adult') {
+                    streamURL = `${currentAccount.host}/live/${currentAccount.username}/${currentAccount.password}/${streamId}.m3u8`;
+                } else if (currentCategory === 'foreign') {
+                    streamURL = `${currentAccount.host}/movie/${currentAccount.username}/${currentAccount.password}/${streamId}.${extension}`;
+                } else {
+                    streamURL = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4";
+                }
+            }
+
+            player.src({
+                src: streamURL,
+                type: (currentCategory !== 'foreign' || extension === 'm3u8') ? 'application/x-mpegURL' : 'video/mp4'
+            });
+            player.play();
+        }
+
+        function rewindPlayer(sec) { player.currentTime(player.currentTime() - sec); }
+        function forwardPlayer(sec) { player.currentTime(player.currentTime() + sec); }
+        function toggleFullscreen() { player.isFullscreen() ? player.exitFullscreen() : player.requestFullscreen(); }
+
+        function logout() {
+            localStorage.clear();
+            location.reload();
+        }
+    </script>
+</body>
+</html>
